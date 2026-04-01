@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gong Data Cloud — Use Case Evaluator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; color: #1a1a1a; background: #f5f5f3; min-height: 100vh; padding: 2rem 1rem; }
+  .page { max-width: 860px; margin: 0 auto; }
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .page-header p { font-size: 13px; color: #888; }
+  .card { background: #fff; border: 0.5px solid #e0e0da; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+  .section-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 0.5px solid #e8e8e4; display: flex; align-items: center; gap: 8px; }
+  .section-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; background: #EAF3DE; color: #3B6D11; }
+  label.field-label { display: block; font-size: 11px; font-weight: 600; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  input[type=text], textarea { width: 100%; font-family: inherit; font-size: 14px; color: #1a1a1a; background: #f9f9f7; border: 0.5px solid #d0d0ca; border-radius: 8px; padding: 8px 10px; outline: none; }
+  input[type=text]:focus, textarea:focus { border-color: #378ADD; box-shadow: 0 0 0 2px rgba(55,138,221,0.12); }
+  textarea { resize: vertical; min-height: 64px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .field { margin-bottom: 1rem; }
+  .field:last-child { margin-bottom: 0; }
+  .radio-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .radio-opt { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 0.5px solid #d0d0ca; background: #f9f9f7; color: #1a1a1a; user-select: none; transition: all 0.1s; }
+  .radio-opt:hover { background: #f0f0ec; }
+  .radio-opt input { display: none; }
+  .radio-opt.selected { border-color: #378ADD; background: #E6F1FB; color: #185FA5; font-weight: 500; }
+  .eval-btn { margin-top: 1.25rem; padding: 10px 28px; font-size: 14px; font-weight: 600; border-radius: 8px; border: none; background: #1a1a1a; color: #fff; cursor: pointer; transition: background 0.15s; }
+  .eval-btn:hover { background: #333; }
+  .reset-btn { margin-top: 1rem; margin-left: 8px; padding: 8px 20px; font-size: 13px; border-radius: 8px; border: 0.5px solid #d0d0ca; background: #fff; color: #666; cursor: pointer; }
+  .reset-btn:hover { background: #f5f5f3; }
+  .verdict-box { border-radius: 12px; padding: 1.25rem 1.5rem; margin-top: 1.5rem; border: 0.5px solid; }
+  .verdict-box.green { background: #EAF3DE; border-color: #97C459; }
+  .verdict-box.amber { background: #FAEEDA; border-color: #EF9F27; }
+  .verdict-box.red { background: #FCEBEB; border-color: #F09595; }
+  .verdict-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .verdict-title.green { color: #3B6D11; }
+  .verdict-title.amber { color: #854F0B; }
+  .verdict-title.red { color: #A32D2D; }
+  .verdict-body { font-size: 13px; color: #555; line-height: 1.6; }
+  .checklist { margin-top: 8px; }
+  .check-item { font-size: 13px; color: #444; margin: 6px 0; display: flex; gap: 8px; align-items: flex-start; line-height: 1.5; }
+  .check-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .dot-red { background: #E24B4A; }
+  .dot-amber { background: #EF9F27; }
+  .dot-green { background: #639922; }
+  .checklist-label { font-size: 11px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px; margin-bottom: 4px; }
+  .summary-card { margin-top: 12px; padding: 1rem 1.25rem; border: 0.5px solid #e0e0da; border-radius: 12px; background: #f9f9f7; }
+  .summary-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .summary-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; color: #1a1a1a; }
+  .summary-desc { font-size: 13px; color: #666; margin-bottom: 8px; line-height: 1.5; }
+  .summary-dest { font-size: 12px; color: #999; }
+  .flags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .flag { font-size: 12px; padding: 3px 10px; border-radius: 4px; font-weight: 500; }
+  .flag-red { background: #FCEBEB; color: #A32D2D; }
+  .flag-amber { background: #FAEEDA; color: #854F0B; }
+  .flag-blue { background: #E6F1FB; color: #185FA5; }
+  .flag-green { background: #EAF3DE; color: #3B6D11; }
+  .divider { border: none; border-top: 0.5px solid #e8e8e4; margin: 1.25rem 0; }
+  .fivetran-note { font-size: 12px; color: #666; background: #f9f9f7; border-left: 3px solid #378ADD; border-radius: 0 6px 6px 0; padding: 8px 12px; margin-top: 8px; line-height: 1.6; }
+  .path-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .path-card { border: 0.5px solid #e0e0da; border-radius: 10px; padding: 12px; background: #fff; }
+  .path-card.recommended { border-color: #97C459; background: #EAF3DE; }
+  .path-card.secondary { border-color: #85B7EB; background: #E6F1FB; }
+  .path-card.blocked { border-color: #F09595; background: #FCEBEB; }
+  .path-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .path-label.green { color: #3B6D11; }
+  .path-label.blue { color: #185FA5; }
+  .path-label.red { color: #A32D2D; }
+  .path-label.gray { color: #888; }
+  .path-name { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .path-desc { font-size: 12px; color: #555; line-height: 1.5; }
+  .ft-section { margin-top: 1rem; padding-top: 1rem; border-top: 0.5px solid #e8e8e4; display: none; }
+  .submit-btn { margin-top: 1rem; margin-left: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600; border-radius: 8px; border: none; background: #1D9E75; color: #fff; cursor: pointer; transition: background 0.15s; display: none; }
+  .submit-btn:hover { background: #0F6E56; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } .path-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="page-header">
+    <h1>Gong Data Cloud — Use Case Evaluator</h1>
+    <p>Fill out each section to determine if your use case is supported by Gong Data Cloud, Fivetran, or the direct API — and surface known limitations before you build.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Use case details</div>
+    <div class="row">
+      <div class="field">
+        <label class="field-label">Use case name</label>
+        <input type="text" id="uc-name" placeholder="e.g. Rep activity dashboard">
+      </div>
+      <div class="field">
+        <label class="field-label">Requestor / team</label>
+        <input type="text" id="uc-team" placeholder="e.g. Sales Ops">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Description — what question is this trying to answer?</label>
+      <textarea id="uc-desc" placeholder="e.g. We want to see talk ratio, longest monologue, and questions asked per rep per week, broken down by manager."></textarea>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label class="field-label">Primary data needed</label>
+        <input type="text" id="uc-data" placeholder="e.g. call transcripts, tracker mentions, user stats">
+      </div>
+      <div class="field">
+        <label class="field-label">Target destination / BI tool</label>
+        <input type="text" id="uc-dest" placeholder="e.g. Snowflake + Tableau">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Ingestion method <span class="section-badge">New</span></div>
+    <div class="field">
+      <label class="field-label">How do you plan to ingest Gong data?</label>
+      <div class="radio-group" id="q-ingestion">
+        <label class="radio-opt" onclick="pick('q-ingestion','datacloud')"><input type="radio" value="datacloud">Gong Data Cloud (native)</label>
+        <label class="radio-opt" onclick="pick('q-ingestion','fivetran')"><input type="radio" value="fivetran">Fivetran → Gong API</label>
+        <label class="radio-opt" onclick="pick('q-ingestion','api')"><input type="radio" value="api">Direct Gong API</label>
+        <label class="radio-opt" onclick="pick('q-ingestion','unknown')"><input type="radio" value="unknown">Not Decided Yet</label>
+      </div>
+    </div>
+
+    <div id="fivetran-section" class="ft-section">
+      <div class="field">
+        <label class="field-label">Sync frequency needed</label>
+        <div class="radio-group" id="q-ftfreq">
+          <label class="radio-opt" onclick="pick('q-ftfreq','daily')"><input type="radio" value="daily">Daily or less</label>
+          <label class="radio-opt" onclick="pick('q-ftfreq','6hr')"><input type="radio" value="6hr">Every 6 hours (Fivetran default)</label>
+          <label class="radio-opt" onclick="pick('q-ftfreq','hourly')"><input type="radio" value="hourly">Hourly or faster</label>
+        </div>
+        <div class="fivetran-note">Gong enforces 3 API calls/sec and 10,000 API calls/day per key. High-frequency syncs on large orgs risk hitting this ceiling and causing failures.</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Do you need transcript data?</label>
+        <div class="radio-group" id="q-fttranscript">
+          <label class="radio-opt" onclick="pick('q-fttranscript','no')"><input type="radio" value="no">No</label>
+          <label class="radio-opt" onclick="pick('q-fttranscript','yes')"><input type="radio" value="yes">Yes - full transcripts</label>
+        </div>
+        <div class="fivetran-note">Fivetran re-imports the TRANSCRIPT table on a monthly basis. Speaker ID updates, custom dictionary edits, or corrected transcripts may take up to a month to appear in your warehouse.</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Do you need AI call breakdowns? (outlines, highlights, key points)</label>
+        <div class="radio-group" id="q-ftai">
+          <label class="radio-opt" onclick="pick('q-ftai','no')"><input type="radio" value="no">No</label>
+          <label class="radio-opt" onclick="pick('q-ftai','yes')"><input type="radio" value="yes">Yes</label>
+        </div>
+        <div class="fivetran-note">Fivetran added CALL_OUTLINE, CALL_OUTLINE_ITEM, CALL_HIGHLIGHT, CALL_HIGHLIGHT_ITEM, and CALL_KEY_POINT in June 2025. These tables are not in the Gong Data Cloud schema — Fivetran is the only way to get them.</div>
+      </div>
+      <div class="field">
+        <label class="field-label">How many API keys / connections are sharing the Gong API key?</label>
+        <div class="radio-group" id="q-ftkeys">
+          <label class="radio-opt" onclick="pick('q-ftkeys','one')"><input type="radio" value="one">One shared API key</label>
+          <label class="radio-opt" onclick="pick('q-ftkeys','multiple')"><input type="radio" value="multiple">Separate API keys per connection</label>
+          <label class="radio-opt" onclick="pick('q-ftkeys','unknown')"><input type="radio" value="unknown">Not sure</label>
+        </div>
+        <div class="fivetran-note">All Fivetran connections sharing one API key also share the 10,000 call/day quota. Separate keys give each connection its own independent limit.</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Are your downstream queries tolerant of schema changes?</label>
+        <div class="radio-group" id="q-ftschema">
+          <label class="radio-opt" onclick="pick('q-ftschema','yes')"><input type="radio" value="yes">Yes - built to handle changes</label>
+          <label class="radio-opt" onclick="pick('q-ftschema','no')"><input type="radio" value="no">No - hardcoded column references</label>
+          <label class="radio-opt" onclick="pick('q-ftschema','unknown')"><input type="radio" value="unknown">Not sure</label>
+        </div>
+        <div class="fivetran-note">Fivetran has introduced multiple breaking schema changes to the Gong connector — tables merged, renamed, and split across versions. Hardcoded queries will break without a monitoring strategy.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Data & requirements</div>
+
+    <div class="field">
+      <label class="field-label">How often does this report need to refresh?</label>
+      <div class="radio-group" id="q-refresh">
+        <label class="radio-opt" onclick="pick('q-refresh','daily')"><input type="radio" value="daily">Daily or less frequent</label>
+        <label class="radio-opt" onclick="pick('q-refresh','intraday')"><input type="radio" value="intraday">Multiple times per day</label>
+        <label class="radio-opt" onclick="pick('q-refresh','realtime')"><input type="radio" value="realtime">Real-time / live</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Does this require writing data back into Gong?</label>
+      <div class="radio-group" id="q-writeback">
+        <label class="radio-opt" onclick="pick('q-writeback','no')"><input type="radio" value="no">No - read only</label>
+        <label class="radio-opt" onclick="pick('q-writeback','yes')"><input type="radio" value="yes">Yes - push data into Gong</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Which data types are needed? (select all that apply)</label>
+      <div class="radio-group" id="q-datatypes">
+        <label class="radio-opt" onclick="toggle('q-datatypes','calls');event.preventDefault()"><input type="checkbox" value="calls" onclick="event.stopPropagation()">Calls / recordings</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','transcripts');event.preventDefault()"><input type="checkbox" value="transcripts" onclick="event.stopPropagation()">Transcripts</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','trackers');event.preventDefault()"><input type="checkbox" value="trackers" onclick="event.stopPropagation()">Tracker mentions</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','emails');event.preventDefault()"><input type="checkbox" value="emails" onclick="event.stopPropagation()">Emails</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','scorecards');event.preventDefault()"><input type="checkbox" value="scorecards" onclick="event.stopPropagation()">Scorecards</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','forecast');event.preventDefault()"><input type="checkbox" value="forecast" onclick="event.stopPropagation()">Forecast data</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','userstats');event.preventDefault()"><input type="checkbox" value="userstats" onclick="event.stopPropagation()">User / interaction stats</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','engage');event.preventDefault()"><input type="checkbox" value="engage" onclick="event.stopPropagation()">Engage flows / sequences</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','linkedin');event.preventDefault()"><input type="checkbox" value="linkedin" onclick="event.stopPropagation()">LinkedIn activity</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','audit');event.preventDefault()"><input type="checkbox" value="audit" onclick="event.stopPropagation()">Audit logs</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','smarttracker');event.preventDefault()"><input type="checkbox" value="smarttracker" onclick="event.stopPropagation()">AI Smart Tracker summaries</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','media');event.preventDefault()"><input type="checkbox" value="media" onclick="event.stopPropagation()">Call media / audio files</label>
+        <label class="radio-opt" onclick="toggle('q-datatypes','aicallbreakdown');event.preventDefault()"><input type="checkbox" value="aicallbreakdown" onclick="event.stopPropagation()">AI call outlines / highlights / key points</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Which data warehouse will be used?</label>
+      <div class="radio-group" id="q-warehouse">
+        <label class="radio-opt" onclick="pick('q-warehouse','snowflake')"><input type="radio" value="snowflake">Snowflake</label>
+        <label class="radio-opt" onclick="pick('q-warehouse','bigquery')"><input type="radio" value="bigquery">BigQuery</label>
+        <label class="radio-opt" onclick="pick('q-warehouse','databricks')"><input type="radio" value="databricks">Databricks</label>
+        <label class="radio-opt" onclick="pick('q-warehouse','s3')"><input type="radio" value="s3">S3</label>
+        <label class="radio-opt" onclick="pick('q-warehouse','redshift')"><input type="radio" value="redshift">Redshift</label>
+        <label class="radio-opt" onclick="pick('q-warehouse','other')"><input type="radio" value="other">Other / unsupported by Data Cloud</label>
+        <label class="radio-opt" onclick="pick('q-warehouse','unknown')"><input type="radio" value="unknown">Not Decided Yet</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Does this involve CRM custom fields from Salesforce?</label>
+      <div class="radio-group" id="q-crm">
+        <label class="radio-opt" onclick="pick('q-crm','no')"><input type="radio" value="no">No</label>
+        <label class="radio-opt" onclick="pick('q-crm','few')"><input type="radio" value="few">Yes - fewer than 25 fields</label>
+        <label class="radio-opt" onclick="pick('q-crm','many')"><input type="radio" value="many">Yes — more than 25 fields</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Does this need event-driven triggers or webhooks?</label>
+      <div class="radio-group" id="q-webhooks">
+        <label class="radio-opt" onclick="pick('q-webhooks','no')"><input type="radio" value="no">No - batch reporting only</label>
+        <label class="radio-opt" onclick="pick('q-webhooks','yes')"><input type="radio" value="yes">Yes — trigger on events (e.g. call completed)</label>
+      </div>
+    </div>
+
+    <button class="eval-btn" onclick="safeEvaluate()">Evaluate this use case</button>
+    <button class="reset-btn" onclick="resetForm()">Reset</button>
+  </div>
+
+  <div id="verdict-area"></div>
+</div>
+
+<script>
+const selections = {};
+const multiSelections = {};
+
+function pick(groupId, value) {
+  selections[groupId] = value;
+  document.querySelectorAll('#' + groupId + ' .radio-opt').forEach(el => {
+    el.classList.toggle('selected', el.querySelector('input').value === value);
+  });
+  if (groupId === 'q-ingestion') {
+    document.getElementById('fivetran-section').style.display = value === 'fivetran' ? 'block' : 'none';
+  }
+}
+
+function toggle(groupId, value) {
+  if (!multiSelections[groupId]) multiSelections[groupId] = new Set();
+  const s = multiSelections[groupId];
+  s.has(value) ? s.delete(value) : s.add(value);
+  document.querySelectorAll('#' + groupId + ' .radio-opt').forEach(el => {
+    el.classList.toggle('selected', s.has(el.querySelector('input').value));
+  });
+}
+
+function getMulti(groupId) { return multiSelections[groupId] || new Set(); }
+
+function resetForm() {
+  ['uc-name','uc-team','uc-desc','uc-data','uc-dest'].forEach(id => document.getElementById(id).value = '');
+  Object.keys(selections).forEach(k => delete selections[k]);
+  Object.keys(multiSelections).forEach(k => delete multiSelections[k]);
+  document.querySelectorAll('.radio-opt').forEach(el => el.classList.remove('selected'));
+  document.getElementById('verdict-area').innerHTML = '';
+  document.getElementById('fivetran-section').style.display = 'none';
+}
+
+function evaluate() {
+  const name = document.getElementById('uc-name').value || 'This use case';
+  const desc = document.getElementById('uc-desc').value;
+  const dest = document.getElementById('uc-dest').value;
+
+  const ingestion = selections['q-ingestion'];
+  const refresh = selections['q-refresh'];
+  const writeback = selections['q-writeback'];
+  const warehouse = selections['q-warehouse'];
+  const crm = selections['q-crm'];
+  const webhooks = selections['q-webhooks'];
+  const datatypes = getMulti('q-datatypes');
+  const ftfreq = selections['q-ftfreq'];
+  const fttranscript = selections['q-fttranscript'];
+  const ftai = selections['q-ftai'];
+  const ftkeys = selections['q-ftkeys'];
+  const ftschema = selections['q-ftschema'];
+
+  const blockers = [], warnings = [], notes = [], ftFlags = [];
+
+  // Universal hard blockers — no path supports these
+  if (datatypes.has('linkedin')) blockers.push('LinkedIn activity is not available via Data Cloud, Fivetran, or the API. No programmatic access exists.');
+  if (datatypes.has('smarttracker')) blockers.push('AI Smart Tracker summaries are not exposed via Data Cloud, Fivetran, or any public API endpoint.');
+
+  // Engage — available via Engage API only, not Data Cloud or Fivetran
+  if (datatypes.has('engage') && ingestion !== 'api') blockers.push('Engage flow data is not available in Data Cloud or Fivetran. Requires the Gong Engage API directly.');
+
+  // Data Cloud blockers
+  if (ingestion === 'datacloud') {
+    if (writeback === 'yes') blockers.push('Data Cloud is read-only. Writing data back into Gong requires the API.');
+    if (refresh === 'realtime' || refresh === 'intraday') blockers.push('Data Cloud refreshes once daily. Sub-daily or real-time refresh requires Fivetran or the direct API.');
+    if (warehouse === 'other') blockers.push('Your warehouse is not supported by Gong Data Cloud. Use Fivetran (which supports more destinations) or the direct API.');
+    if (datatypes.has('audit')) blockers.push('Audit logs are not in Data Cloud. Use the Gong API directly.');
+    if (datatypes.has('media')) blockers.push('Call audio/video files cannot be exported via Data Cloud. Use the API for media downloads.');
+    if (webhooks === 'yes') blockers.push('Event-driven triggers are not supported by Data Cloud. Use the direct API.');
+    if (crm === 'many') blockers.push('More than 25 CRM custom fields: Gong enforces a hard platform limit of 25 synced custom fields.');
+    if (datatypes.has('aicallbreakdown')) blockers.push('AI call outlines, highlights, and key points are not in the Gong Data Cloud schema. Available only via Fivetran (June 2025 schema+).');
+  }
+
+  // Fivetran blockers
+  if (ingestion === 'fivetran') {
+    if (writeback === 'yes') blockers.push('Fivetran is read-only (extract only). Writing data back into Gong requires the direct API.');
+    if (refresh === 'realtime') blockers.push('Real-time data is not achievable via Fivetran. Gong API rate limits constrain high-frequency syncs.');
+    if (webhooks === 'yes') blockers.push('Event-driven webhooks cannot be handled by Fivetran. Use the direct Gong API.');
+    if (datatypes.has('audit')) blockers.push('Audit logs are not exposed via the Gong API, so Fivetran cannot sync them either.');
+    if (datatypes.has('media')) blockers.push('Call audio/video file downloads are not part of the Fivetran Gong connector. Use the API directly.');
+    if (crm === 'many') blockers.push('More than 25 CRM custom fields: this is a Gong platform limit — the data simply will not exist to sync.');
+
+    // Fivetran-specific flags
+    if (ftfreq === 'hourly') ftFlags.push({ type: 'red', text: 'Hourly sync is high-risk. Gong\'s 10,000 daily API call limit can be exhausted on large orgs, causing sync failures. Consider daily or 6-hour cadence, or request a higher limit from Gong support.' });
+    if (ftfreq === '6hr') ftFlags.push({ type: 'amber', text: '6-hour sync is Fivetran\'s default and generally safe, but large orgs with heavy call volume should monitor daily API quota consumption.' });
+    if (fttranscript === 'yes') ftFlags.push({ type: 'amber', text: 'Transcripts are re-imported monthly. Speaker ID updates, custom dictionary edits, or corrected transcripts may take up to a month to reflect in your warehouse.' });
+    if (ftai === 'yes') ftFlags.push({ type: 'green', text: 'AI call breakdowns (CALL_OUTLINE, CALL_HIGHLIGHT, CALL_KEY_POINT) are available in Fivetran\'s June 2025+ schema. Confirm your connection was created or updated after June 6, 2025.' });
+    if (ftkeys === 'one') ftFlags.push({ type: 'amber', text: 'Single shared API key: all Fivetran connections share one 10,000 call/day quota. Consider separate API keys per connection if running multiple syncs.' });
+    if (ftkeys === 'unknown') ftFlags.push({ type: 'amber', text: 'Confirm your API key setup. Multiple Fivetran connections on one key share the daily quota and can cause failures.' });
+    if (ftschema === 'no') ftFlags.push({ type: 'red', text: 'Hardcoded column references are fragile. Fivetran has introduced multiple breaking schema changes to the Gong connector. Add schema monitoring before going to production.' });
+    if (ftschema === 'unknown') ftFlags.push({ type: 'amber', text: 'Confirm whether downstream queries use hardcoded column names. The Fivetran Gong schema has changed significantly across versions.' });
+
+    if (datatypes.has('aicallbreakdown')) notes.push('AI call outlines, highlights, and key points (CALL_OUTLINE, CALL_OUTLINE_ITEM, CALL_HIGHLIGHT, CALL_HIGHLIGHT_ITEM, CALL_KEY_POINT) are available in Fivetran — not in Gong Data Cloud.');
+    if (warehouse === 'other') warnings.push('Fivetran supports many more warehouse destinations than Gong Data Cloud\'s 5. Confirm your warehouse is supported at fivetran.com/destinations.');
+  }
+
+  // Shared warnings
+  if (datatypes.has('trackers')) notes.push('Keyword/phrase tracker matches are available in Data Cloud (CONVERSATIONS_TRACKERS) and Fivetran (CALL_TRACKER). AI Smart Tracker summaries are not available anywhere.');
+  if (crm === 'few') warnings.push('CRM custom fields: up to 25 supported (Gong platform limit). Confirm your exact count before building.');
+  if (warehouse === 'unknown') warnings.push('Warehouse not decided. For Data Cloud, confirm it\'s one of 5 supported platforms. For Fivetran, verify at fivetran.com/destinations.');
+  if ((warehouse === 's3' || warehouse === 'redshift' || warehouse === 'bigquery' || warehouse === 'databricks') && ingestion === 'datacloud') {
+    warnings.push('Data Cloud uses data copying (not sharing) for this warehouse — a small storage cost applies. Snowflake is the zero-cost option.');
+  }
+
+  // Helpful notes
+  if (datatypes.has('calls')) notes.push('Call metadata is in CALLS/CALL_RECORDINGS (Data Cloud) and CALL table (Fivetran).');
+  if (datatypes.has('userstats')) notes.push('Interaction stats (talk ratio, longest monologue, questions asked) are in USER_CALL_INTERACTION_STATS (Data Cloud) and CALL_INTERACTION (Fivetran).');
+  if (datatypes.has('forecast')) notes.push('Forecast data: FORECAST_SUBMISSIONS and FORECAST_TARGETS tables available in both Data Cloud and Fivetran.');
+  if (datatypes.has('scorecards')) notes.push('Scorecards: available in Data Cloud (SCORECARD_QUESTIONS, SCORECARD_ANSWERS) and Fivetran (SCORECARD_ACTIVITY, SCORECARD_ACTIVITY_ANSWER).');
+  if (datatypes.has('transcripts') && ingestion !== 'fivetran') notes.push('Transcripts: available in CALL_TRANSCRIPT (Data Cloud) as JSON split by speaker and monologue.');
+
+  // Verdict
+  const ftRedCount = ftFlags.filter(f => f.type === 'red').length;
+  let verdict, color, summary;
+  if (datatypes.has('linkedin') || datatypes.has('smarttracker')) {
+    verdict = 'Not currently possible'; color = 'red';
+    summary = 'One or more required data types have no programmatic access anywhere in the Gong ecosystem.';
+  } else if (blockers.length > 0 || ftRedCount > 0) {
+    verdict = ingestion === 'fivetran' ? 'Fivetran path has blockers' : ingestion === 'datacloud' ? 'Data Cloud path has blockers' : 'Blockers found';
+    color = 'red';
+    summary = 'This use case cannot be built as specified. Review blockers below and consider adjusting the ingestion path or requirements.';
+  } else if (warnings.length > 0 || ftFlags.filter(f => f.type === 'amber').length > 0) {
+    verdict = 'Supported with caveats'; color = 'amber';
+    summary = 'No hard blockers, but there are limitations and risks to address before building.';
+  } else {
+    verdict = ingestion === 'fivetran' ? 'Fivetran — looks good' : ingestion === 'datacloud' ? 'Data Cloud — fully supported' : 'Looks viable';
+    color = 'green';
+    summary = 'No blockers or major warnings found. This use case appears buildable with your selected ingestion path.';
+  }
+
+  let html = '<div class="verdict-box ' + color + '">';
+  html += '<div class="verdict-title ' + color + '">' + verdict + '</div>';
+  html += '<div class="verdict-body">' + summary + '</div>';
+
+  if (blockers.length > 0) {
+    html += '<div class="checklist-label">Blockers</div><div class="checklist">';
+    blockers.forEach(b => html += '<div class="check-item"><div class="check-dot dot-red"></div><span>' + b + '</span></div>');
+    html += '</div>';
+  }
+
+  if (ftFlags.length > 0) {
+    const reds = ftFlags.filter(f => f.type === 'red');
+    const ambers = ftFlags.filter(f => f.type === 'amber');
+    const greens = ftFlags.filter(f => f.type === 'green');
+    if (reds.length) { html += '<div class="checklist-label">Fivetran risks</div><div class="checklist">'; reds.forEach(f => html += '<div class="check-item"><div class="check-dot dot-red"></div><span>' + f.text + '</span></div>'); html += '</div>'; }
+    if (ambers.length) { html += '<div class="checklist-label">Fivetran warnings</div><div class="checklist">'; ambers.forEach(f => html += '<div class="check-item"><div class="check-dot dot-amber"></div><span>' + f.text + '</span></div>'); html += '</div>'; }
+    if (greens.length) { html += '<div class="checklist-label">Fivetran notes</div><div class="checklist">'; greens.forEach(f => html += '<div class="check-item"><div class="check-dot dot-green"></div><span>' + f.text + '</span></div>'); html += '</div>'; }
+  }
+
+  if (warnings.length > 0) {
+    html += '<div class="checklist-label">Warnings</div><div class="checklist">';
+    warnings.forEach(w => html += '<div class="check-item"><div class="check-dot dot-amber"></div><span>' + w + '</span></div>');
+    html += '</div>';
+  }
+
+  if (notes.length > 0) {
+    html += '<div class="checklist-label">Relevant tables & notes</div><div class="checklist">';
+    notes.forEach(n => html += '<div class="check-item"><div class="check-dot dot-green"></div><span>' + n + '</span></div>');
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Path recommendation grid when ingestion is unknown or blockers exist
+  if (ingestion === 'unknown' || (blockers.length > 0 && ingestion !== 'api')) {
+    const dcOk = !datatypes.has('linkedin') && !datatypes.has('smarttracker') && !datatypes.has('engage') && !datatypes.has('aicallbreakdown') && refresh !== 'realtime' && refresh !== 'intraday' && writeback !== 'yes' && warehouse !== 'other' && webhooks !== 'yes' && crm !== 'many';
+    const ftOk = !datatypes.has('linkedin') && !datatypes.has('smarttracker') && writeback !== 'yes' && refresh !== 'realtime' && webhooks !== 'yes' && crm !== 'many';
+    const apiNeeded = datatypes.has('engage') || datatypes.has('audit') || writeback === 'yes' || webhooks === 'yes' || refresh === 'realtime';
+
+    html += '<div style="margin-top:14px;"><div class="summary-label">Recommended ingestion paths</div>';
+    html += '<div class="path-grid">';
+
+    html += '<div class="path-card ' + (dcOk ? 'recommended' : 'blocked') + '">';
+    html += '<div class="path-label ' + (dcOk ? 'green' : 'red') + '">' + (dcOk ? 'Option' : 'Not suitable') + '</div>';
+    html += '<div class="path-name">Gong Data Cloud</div>';
+    html += '<div class="path-desc">' + (dcOk ? 'Daily refresh, analytics-ready schema, minimal setup. Best for standard BI reporting.' : 'Does not support one or more of your required data types or refresh needs.') + '</div></div>';
+
+    html += '<div class="path-card ' + (ftOk ? 'secondary' : 'blocked') + '">';
+    html += '<div class="path-label ' + (ftOk ? 'blue' : 'red') + '">' + (ftOk ? 'Option' : 'Not suitable') + '</div>';
+    html += '<div class="path-name">Fivetran → Gong API</div>';
+    html += '<div class="path-desc">' + (ftOk ? 'More frequent syncs, AI call breakdown tables, broader warehouse support. Watch API rate limits.' : 'Does not support one or more required data types.') + '</div></div>';
+
+    html += '<div class="path-card ' + (apiNeeded ? 'secondary' : '') + '">';
+    html += '<div class="path-label ' + (apiNeeded ? 'blue' : 'gray') + '">' + (apiNeeded ? 'Required' : 'Optional') + '</div>';
+    html += '<div class="path-name">Direct Gong API</div>';
+    html += '<div class="path-desc">' + (apiNeeded ? 'Needed for Engage flows, webhooks, write-back, or real-time triggers. Requires engineering effort.' : 'Not required for this use case, but available for real-time or write-back needs.') + '</div></div>';
+
+    html += '</div></div>';
+  }
+
+  // Summary card
+  html += '<div class="summary-card"><div class="summary-label">Evaluation summary</div>';
+  if (name) html += '<div class="summary-name">' + name + '</div>';
+  if (desc) html += '<div class="summary-desc">' + desc + '</div>';
+  if (dest) html += '<div class="summary-dest">Target: ' + dest + '</div>';
+  const ftRedsFinal = ftFlags.filter(f => f.type === 'red').length;
+  const ftAmbersFinal = ftFlags.filter(f => f.type === 'amber').length;
+  html += '<div class="flags">';
+  html += '<span class="flag ' + (blockers.length > 0 ? 'flag-red' : 'flag-blue') + '">' + blockers.length + ' blocker' + (blockers.length !== 1 ? 's' : '') + '</span>';
+  html += '<span class="flag ' + (warnings.length > 0 ? 'flag-amber' : 'flag-blue') + '">' + warnings.length + ' warning' + (warnings.length !== 1 ? 's' : '') + '</span>';
+  if (ingestion === 'fivetran') html += '<span class="flag ' + (ftRedsFinal > 0 ? 'flag-red' : ftAmbersFinal > 0 ? 'flag-amber' : 'flag-green') + '">Fivetran: ' + ftFlags.length + ' flag' + (ftFlags.length !== 1 ? 's' : '') + '</span>';
+  html += '<span class="flag flag-blue">' + notes.length + ' note' + (notes.length !== 1 ? 's' : '') + '</span>';
+  html += '</div></div>';
+
+  document.getElementById('verdict-area').innerHTML = html;
+  document.getElementById('verdict-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function safeEvaluate() {
+  try {
+    evaluate();
+    submitToSheetSilent();
+  } catch(e) {
+    alert('Error: ' + e.message + '\n\n' + e.stack);
+  }
+}
+
+function submitToSheetSilent() {
+  const ZAPIER_WEBHOOK = 'https://hooks.zapier.com/hooks/catch/26439428/unc6fys/';
+
+  const ingestionMap    = { datacloud: 'Gong Data Cloud (native)', fivetran: 'Fivetran -> Gong API', api: 'Direct Gong API', unknown: 'Not Decided Yet' };
+  const refreshMap      = { daily: 'Daily or less frequent', intraday: 'Multiple times per day', realtime: 'Real-time/live' };
+  const writebackMap    = { no: 'No - read only', yes: 'Yes - push data into Gong' };
+  const warehouseMap    = { snowflake: 'Snowflake', bigquery: 'BigQuery', databricks: 'Databricks', s3: 'S3', redshift: 'Redshift', other: 'Other/Unsupported by Data Cloud', unknown: 'Not Decided Yet' };
+  const crmMap          = { no: 'No', few: 'Yes - fewer than 25 fields', many: 'Yes - more than 25 fields' };
+  const webhooksMap     = { no: 'No - batch reporting only', yes: 'Yes - trigger on events (e.g. call completed)' };
+  const ftfreqMap       = { daily: 'Daily or less', '6hr': 'Every 6 hours', hourly: 'Hourly or faster' };
+  const fttranscriptMap = { no: 'No', yes: 'Yes - full transcripts' };
+  const ftaiMap         = { no: 'No', yes: 'Yes' };
+  const ftkeysMap       = { one: 'One shared API key', multiple: 'Separate API keys per connection', unknown: 'Not sure' };
+  const ftschemaMap     = { yes: 'Yes - built to handle changes', no: 'No - hardcoded column references', unknown: 'Not sure' };
+  const datatypeMap     = {
+    calls: 'Calls/recordings', transcripts: 'Transcripts', trackers: 'Tracker Mentions',
+    emails: 'Emails', scorecards: 'Scorecards', forecast: 'Forecast Data',
+    userstats: 'User/Interaction stats', engage: 'Engage Flows/Sequences',
+    linkedin: 'Linkedin Activity', audit: 'Audit logs',
+    smarttracker: 'AI Smart Tracker Summaries', media: 'Call media/audio files',
+    aicallbreakdown: 'AI Call outlines/highlights/key points'
+  };
+
+  const verdictEl = document.querySelector('.verdict-title');
+  const verdictText = verdictEl ? verdictEl.innerText : '';
+  const dt = getMulti('q-datatypes');
+  const selectedDatatypes = Array.from(dt).map(v => datatypeMap[v] || v).join(', ');
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    use_case_name: document.getElementById('uc-name').value,
+    requestor_team: document.getElementById('uc-team').value,
+    description: document.getElementById('uc-desc').value,
+    primary_data_needed: document.getElementById('uc-data').value,
+    target_destination: document.getElementById('uc-dest').value,
+    ingestion_method: ingestionMap[selections['q-ingestion']] || '',
+    refresh_frequency: refreshMap[selections['q-refresh']] || '',
+    writeback_required: writebackMap[selections['q-writeback']] || '',
+    data_warehouse: warehouseMap[selections['q-warehouse']] || '',
+    crm_custom_fields: crmMap[selections['q-crm']] || '',
+    webhooks_required: webhooksMap[selections['q-webhooks']] || '',
+    fivetran_sync_frequency: ftfreqMap[selections['q-ftfreq']] || 'N/A',
+    fivetran_transcript_needed: fttranscriptMap[selections['q-fttranscript']] || 'N/A',
+    fivetran_ai_breakdowns: ftaiMap[selections['q-ftai']] || 'N/A',
+    fivetran_api_key_setup: ftkeysMap[selections['q-ftkeys']] || 'N/A',
+    fivetran_schema_resilience: ftschemaMap[selections['q-ftschema']] || 'N/A',
+    data_types_needed: selectedDatatypes,
+    verdict: verdictText
+  };
+
+  console.log('Sending to Zapier:', payload);
+  fetch(ZAPIER_WEBHOOK, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(() => console.log('Zapier: sent')).catch(e => console.error('Zapier error:', e));
+}
+</script>
+</body>
+</html>
